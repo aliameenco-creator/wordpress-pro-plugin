@@ -162,4 +162,62 @@
         processNext();
     });
 
+    // --- Settings page: Check for Updates ---
+    $('#ai-check-update-btn').on('click', function () {
+        var btn = $(this);
+        var spinner = $('#ai-update-spinner');
+        var resultDiv = $('#ai-update-result');
+
+        btn.prop('disabled', true);
+        spinner.addClass('is-active');
+        resultDiv.hide();
+
+        $.post(aiAltText.ajaxUrl, {
+            action: 'ai_alt_text_check_update',
+            nonce: aiAltText.nonce
+        }, function (response) {
+            spinner.removeClass('is-active');
+            btn.prop('disabled', false);
+            resultDiv.show();
+
+            if (response.success) {
+                var d = response.data;
+                if (d.has_update) {
+                    $('#ai-latest-version-info').html(' &rarr; <strong style="color:#d63638;">v' + d.latest_version + ' available</strong>');
+                    resultDiv.html(
+                        '<div style="background:#fcf0f1; border:1px solid #d63638; border-radius:4px; padding:12px 16px;">' +
+                        '<strong>Update Available: v' + d.latest_version + '</strong> (Released: ' + d.release_date + ')<br><br>' +
+                        '<div style="background:#fff; padding:10px; border-radius:4px; margin:8px 0; font-size:13px;">' +
+                        d.release_notes.replace(/\n/g, '<br>') +
+                        '</div>' +
+                        '<a href="' + d.update_url + '" class="button button-primary" style="margin-top:8px;">Go to Plugins Page to Update</a>' +
+                        '</div>'
+                    );
+                } else {
+                    $('#ai-latest-version-info').html(' &mdash; <strong style="color:#00a32a;">Up to date</strong>');
+                    resultDiv.html(
+                        '<div style="background:#edfaef; border:1px solid #00a32a; border-radius:4px; padding:12px 16px;">' +
+                        '<strong>You are running the latest version (v' + d.current_version + ')</strong><br>' +
+                        '<span style="color:#50575e;">Last release: ' + d.release_date + '</span>' +
+                        '</div>'
+                    );
+                }
+            } else {
+                resultDiv.html(
+                    '<div style="background:#fcf0f1; border:1px solid #d63638; border-radius:4px; padding:12px 16px;">' +
+                    '<strong>Error:</strong> ' + response.data +
+                    '</div>'
+                );
+            }
+        }).fail(function () {
+            spinner.removeClass('is-active');
+            btn.prop('disabled', false);
+            resultDiv.show().html(
+                '<div style="background:#fcf0f1; border:1px solid #d63638; border-radius:4px; padding:12px 16px;">' +
+                '<strong>Error:</strong> Could not check for updates. Please try again.' +
+                '</div>'
+            );
+        });
+    });
+
 })(jQuery);

@@ -3,7 +3,7 @@
  * Plugin Name: Jesuspended AI Alt Text
  * Plugin URI:  https://github.com/aliameenco-creator/wordpress-pro-plugin
  * Description: Automatically generate alt text for images using Google's Gemini API with a single click. Supports custom niche/industry context for better SEO-optimized alt text.
- * Version:     1.3.0
+ * Version:     1.4.0
  * Author:      Ali Ameen
  * Author URI:  https://github.com/aliameenco-creator
  * License:     GPL-2.0+
@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-define( 'AI_ALT_TEXT_VERSION', '1.3.0' );
+define( 'AI_ALT_TEXT_VERSION', '1.4.0' );
 define( 'AI_ALT_TEXT_FILE', __FILE__ );
 define( 'AI_ALT_TEXT_DIR', plugin_dir_path( __FILE__ ) );
 
@@ -40,6 +40,7 @@ class AI_Alt_Text_Generator {
         // AJAX handlers
         add_action( 'wp_ajax_ai_generate_alt_text', array( $this, 'ajax_generate_alt_text' ) );
         add_action( 'wp_ajax_ai_generate_alt_text_bulk', array( $this, 'ajax_generate_alt_text_bulk' ) );
+        add_action( 'wp_ajax_ai_alt_text_check_update', array( $this, 'ajax_check_update' ) );
 
         // Initialize GitHub updater
         new AI_Alt_Text_GitHub_Updater(
@@ -204,6 +205,61 @@ class AI_Alt_Text_Generator {
     }
 
     /**
+     * AJAX: Manually check GitHub for plugin updates.
+     */
+    public function ajax_check_update() {
+        check_ajax_referer( 'ai_alt_text_nonce', 'nonce' );
+
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( __( 'Permission denied.', 'jesuspended-alt-text-ai' ) );
+        }
+
+        // Clear cached update transient so WordPress re-checks
+        delete_site_transient( 'update_plugins' );
+
+        // Fetch latest release from GitHub directly
+        $url = sprintf(
+            'https://api.github.com/repos/%s/%s/releases/latest',
+            'aliameenco-creator',
+            'wordpress-pro-plugin'
+        );
+
+        $response = wp_remote_get( $url, array(
+            'headers' => array(
+                'Accept'     => 'application/vnd.github.v3+json',
+                'User-Agent' => 'WordPress/' . get_bloginfo( 'version' ),
+            ),
+            'timeout' => 15,
+        ) );
+
+        if ( is_wp_error( $response ) ) {
+            wp_send_json_error( __( 'Could not connect to GitHub.', 'jesuspended-alt-text-ai' ) );
+        }
+
+        if ( wp_remote_retrieve_response_code( $response ) !== 200 ) {
+            wp_send_json_error( __( 'GitHub API error. Try again later.', 'jesuspended-alt-text-ai' ) );
+        }
+
+        $release = json_decode( wp_remote_retrieve_body( $response ) );
+        if ( empty( $release ) || ! isset( $release->tag_name ) ) {
+            wp_send_json_error( __( 'No releases found on GitHub.', 'jesuspended-alt-text-ai' ) );
+        }
+
+        $remote_version = ltrim( $release->tag_name, 'v' );
+        $local_version  = AI_ALT_TEXT_VERSION;
+        $has_update     = version_compare( $remote_version, $local_version, '>' );
+
+        wp_send_json_success( array(
+            'current_version' => $local_version,
+            'latest_version'  => $remote_version,
+            'has_update'      => $has_update,
+            'release_notes'   => $release->body,
+            'release_date'    => date( 'F j, Y', strtotime( $release->published_at ) ),
+            'update_url'      => admin_url( 'plugins.php' ),
+        ) );
+    }
+
+    /**
      * Build the AI prompt with niche context and custom instructions.
      */
     private function build_prompt() {
@@ -323,6 +379,27 @@ class AI_Alt_Text_Generator {
         ?>
         <div class="wrap">
             <h1><?php esc_html_e( 'AI Alt Text Generator — Settings', 'jesuspended-alt-text-ai' ); ?></h1>
+
+            <!-- Plugin Update Section -->
+            <div class="ai-update-card" style="background:#fff; border:1px solid #c3c4c7; border-left:4px solid #2271b1; padding:16px 20px; margin:20px 0; max-width:700px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                    <div>
+                        <strong style="font-size:14px;"><?php esc_html_e( 'Plugin Version', 'jesuspended-alt-text-ai' ); ?></strong><br>
+                        <span style="color:#50575e;">
+                            <?php printf( esc_html__( 'Installed: v%s', 'jesuspended-alt-text-ai' ), AI_ALT_TEXT_VERSION ); ?>
+                            <span id="ai-latest-version-info"></span>
+                        </span>
+                    </div>
+                    <div>
+                        <button type="button" class="button button-secondary" id="ai-check-update-btn">
+                            <?php esc_html_e( 'Check for Updates', 'jesuspended-alt-text-ai' ); ?>
+                        </button>
+                        <span class="spinner" id="ai-update-spinner" style="float:none;"></span>
+                    </div>
+                </div>
+                <div id="ai-update-result" style="margin-top:12px; display:none;"></div>
+            </div>
+
             <form method="post" action="options.php">
                 <?php settings_fields( 'ai_alt_text_settings' ); ?>
 
