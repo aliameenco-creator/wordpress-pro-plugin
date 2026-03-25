@@ -1,0 +1,35 @@
+/* Progress bar */
+.ai-progress-bar-wrap {
+    background: #e0e0e0;
+    border-radius: 4px;
+    overflow: hidden;
+    height: 24px;
+    max-width: 400px;
+}
+
+.ai-progress-bar {
+    background: #2271b1;
+    color: #fff;
+    height: 100%;
+    text-align: center;
+    line-height: 24px;
+    font-size: 13px;
+    font-weight: 600;
+    transition: width 0.3s ease;
+    border-radius: 4px;
+}
+
+/* Bulk controls spacing */
+.ai-bulk-controls .button {
+    margin-left: 8px;
+}
+
+/* Table thumbnail */
+#ai-images-table img {
+    border-radius: 4px;
+}
+
+/* Status column */
+#ai-images-table .ai-status {
+    min-width: 120px;
+}
