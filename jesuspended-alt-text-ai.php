@@ -1,9 +1,9 @@
 <?php
 /**
- * Plugin Name: AI Alt Text Generator
+ * Plugin Name: Jesuspended AI Alt Text
  * Plugin URI:  https://github.com/aliameenco-creator/wordpress-pro-plugin
  * Description: Automatically generate alt text for images using Google's Gemini API with a single click. Supports custom niche/industry context for better SEO-optimized alt text.
- * Version:     1.2.0
+ * Version:     1.3.0
  * Author:      Ali Ameen
  * Author URI:  https://github.com/aliameenco-creator
  * License:     GPL-2.0+
@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-define( 'AI_ALT_TEXT_VERSION', '1.2.0' );
+define( 'AI_ALT_TEXT_VERSION', '1.3.0' );
 define( 'AI_ALT_TEXT_FILE', __FILE__ );
 define( 'AI_ALT_TEXT_DIR', plugin_dir_path( __FILE__ ) );
 

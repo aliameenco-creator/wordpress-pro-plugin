@@ -13,30 +13,37 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class AI_Alt_Text_GitHub_Updater {
 
-    private $file;           // Full path to main plugin file
-    private $plugin;         // Plugin basename (e.g. folder/file.php)
-    private $plugin_data;    // Plugin header data
-    private $github_owner;   // GitHub username
-    private $github_repo;    // GitHub repo name
-    private $github_response; // Cached API response
+    private $file;
+    private $basename;
+    private $github_owner;
+    private $github_repo;
+    private $github_response;
 
     public function __construct( $file, $owner, $repo ) {
         $this->file         = $file;
+        $this->basename     = plugin_basename( $file );
         $this->github_owner = $owner;
         $this->github_repo  = $repo;
 
-        add_action( 'admin_init', array( $this, 'set_plugin_data' ) );
-        add_filter( 'pre_set_site_transient_update_plugins', array( $this, 'check_for_update' ) );
-        add_filter( 'plugins_api', array( $this, 'plugin_info' ), 20, 3 );
-        add_filter( 'upgrader_post_install', array( $this, 'after_install' ), 10, 3 );
-
-        // Block WordPress.org from overriding our updates
+        // Block WordPress.org from ever seeing this plugin
         add_filter( 'http_request_args', array( $this, 'exclude_from_wporg' ), 5, 2 );
+
+        // Remove any .org update data that slipped through (runs every time transient is read)
+        add_filter( 'site_transient_update_plugins', array( $this, 'clean_wporg_updates' ) );
+
+        // Inject our GitHub update info
+        add_filter( 'pre_set_site_transient_update_plugins', array( $this, 'check_for_update' ) );
+
+        // Show our own plugin details in the "View Details" popup
+        add_filter( 'plugins_api', array( $this, 'plugin_info' ), 20, 3 );
+
+        // Fix folder name after GitHub zip extraction
+        add_filter( 'upgrader_post_install', array( $this, 'after_install' ), 10, 3 );
     }
 
     /**
-     * Exclude this plugin from WordPress.org update checks.
-     * Prevents slug collisions with plugins hosted on .org.
+     * Strip this plugin out of the request WordPress sends to api.wordpress.org
+     * so .org never returns update data for it.
      */
     public function exclude_from_wporg( $args, $url ) {
         if ( strpos( $url, 'api.wordpress.org/plugins/update-check' ) === false ) {
@@ -48,14 +55,13 @@ class AI_Alt_Text_GitHub_Updater {
         }
 
         $plugins = json_decode( $args['body']['plugins'], true );
-        $basename = plugin_basename( $this->file );
 
-        if ( isset( $plugins['plugins'][ $basename ] ) ) {
-            unset( $plugins['plugins'][ $basename ] );
+        if ( isset( $plugins['plugins'][ $this->basename ] ) ) {
+            unset( $plugins['plugins'][ $this->basename ] );
         }
 
         if ( isset( $plugins['active'] ) && is_array( $plugins['active'] ) ) {
-            $plugins['active'] = array_values( array_diff( $plugins['active'], array( $basename ) ) );
+            $plugins['active'] = array_values( array_diff( $plugins['active'], array( $this->basename ) ) );
         }
 
         $args['body']['plugins'] = wp_json_encode( $plugins );
@@ -64,15 +70,30 @@ class AI_Alt_Text_GitHub_Updater {
     }
 
     /**
-     * Load plugin header data.
+     * Safety net: if WordPress.org somehow returned update data for our
+     * plugin basename (from a cached transient, for example), strip it out
+     * every time the transient is read.
      */
-    public function set_plugin_data() {
-        $this->plugin      = plugin_basename( $this->file );
-        $this->plugin_data = get_plugin_data( $this->file );
+    public function clean_wporg_updates( $transient ) {
+        // If .org put something in response for our basename, check if it's
+        // actually from .org (not our GitHub data). Our GitHub data has our
+        // repo URL in 'package'. If 'package' doesn't contain 'github.com',
+        // it came from .org — remove it.
+        if ( isset( $transient->response[ $this->basename ] ) ) {
+            $pkg = '';
+            if ( is_object( $transient->response[ $this->basename ] ) && isset( $transient->response[ $this->basename ]->package ) ) {
+                $pkg = $transient->response[ $this->basename ]->package;
+            }
+            if ( strpos( $pkg, 'github.com' ) === false ) {
+                unset( $transient->response[ $this->basename ] );
+            }
+        }
+
+        return $transient;
     }
 
     /**
-     * Fetch the latest release info from GitHub API.
+     * Fetch the latest release info from GitHub API (cached per request).
      */
     private function get_github_release() {
         if ( ! empty( $this->github_response ) ) {
@@ -114,16 +135,14 @@ class AI_Alt_Text_GitHub_Updater {
             return $transient;
         }
 
-        $this->set_plugin_data();
         $release = $this->get_github_release();
-
         if ( ! $release ) {
             return $transient;
         }
 
-        // Strip "v" prefix from tag (e.g. "v1.2.0" → "1.2.0")
         $remote_version = ltrim( $release->tag_name, 'v' );
-        $local_version  = $this->plugin_data['Version'];
+        $plugin_data    = get_plugin_data( $this->file );
+        $local_version  = $plugin_data['Version'];
 
         if ( version_compare( $remote_version, $local_version, '>' ) ) {
             $download_url = sprintf(
@@ -133,17 +152,15 @@ class AI_Alt_Text_GitHub_Updater {
                 $release->tag_name
             );
 
-            $plugin_info = (object) array(
-                'slug'        => dirname( $this->plugin ),
-                'plugin'      => $this->plugin,
+            $transient->response[ $this->basename ] = (object) array(
+                'slug'        => dirname( $this->basename ),
+                'plugin'      => $this->basename,
                 'new_version' => $remote_version,
-                'url'         => $this->plugin_data['PluginURI'],
+                'url'         => $plugin_data['PluginURI'],
                 'package'     => $download_url,
                 'icons'       => array(),
                 'banners'     => array(),
             );
-
-            $transient->response[ $this->plugin ] = $plugin_info;
         }
 
         return $transient;
@@ -157,42 +174,39 @@ class AI_Alt_Text_GitHub_Updater {
             return $result;
         }
 
-        if ( ! isset( $args->slug ) || $args->slug !== dirname( $this->plugin ) ) {
+        if ( ! isset( $args->slug ) || $args->slug !== dirname( $this->basename ) ) {
             return $result;
         }
 
-        $this->set_plugin_data();
         $release = $this->get_github_release();
-
         if ( ! $release ) {
             return $result;
         }
 
+        $plugin_data    = get_plugin_data( $this->file );
         $remote_version = ltrim( $release->tag_name, 'v' );
 
-        $info = (object) array(
-            'name'              => $this->plugin_data['Name'],
-            'slug'              => dirname( $this->plugin ),
-            'version'           => $remote_version,
-            'author'            => $this->plugin_data['AuthorName'],
-            'homepage'          => $this->plugin_data['PluginURI'],
-            'requires'          => '5.0',
-            'tested'            => get_bloginfo( 'version' ),
-            'requires_php'      => '7.4',
-            'download_link'     => sprintf(
+        return (object) array(
+            'name'          => $plugin_data['Name'],
+            'slug'          => dirname( $this->basename ),
+            'version'       => $remote_version,
+            'author'        => $plugin_data['AuthorName'],
+            'homepage'      => $plugin_data['PluginURI'],
+            'requires'      => '5.0',
+            'tested'        => get_bloginfo( 'version' ),
+            'requires_php'  => '7.4',
+            'download_link' => sprintf(
                 'https://github.com/%s/%s/archive/refs/tags/%s.zip',
                 $this->github_owner,
                 $this->github_repo,
                 $release->tag_name
             ),
-            'sections'          => array(
-                'description'  => $this->plugin_data['Description'],
-                'changelog'    => nl2br( esc_html( $release->body ) ),
+            'sections'      => array(
+                'description' => $plugin_data['Description'],
+                'changelog'   => nl2br( esc_html( $release->body ) ),
             ),
-            'last_updated'      => $release->published_at,
+            'last_updated'  => $release->published_at,
         );
-
-        return $info;
     }
 
     /**
@@ -203,21 +217,19 @@ class AI_Alt_Text_GitHub_Updater {
      * the folder name to match the existing plugin directory.
      */
     public function after_install( $response, $hook_extra, $result ) {
-        if ( ! isset( $hook_extra['plugin'] ) || $hook_extra['plugin'] !== $this->plugin ) {
+        if ( ! isset( $hook_extra['plugin'] ) || $hook_extra['plugin'] !== $this->basename ) {
             return $result;
         }
 
         global $wp_filesystem;
 
-        $plugin_dir    = WP_PLUGIN_DIR . '/' . dirname( $this->plugin );
+        $plugin_dir    = WP_PLUGIN_DIR . '/' . dirname( $this->basename );
         $installed_dir = $result['destination'];
 
-        // Move to the correct directory name
         $wp_filesystem->move( $installed_dir, $plugin_dir );
         $result['destination'] = $plugin_dir;
 
-        // Re-activate the plugin
-        activate_plugin( $this->plugin );
+        activate_plugin( $this->basename );
 
         return $result;
     }
