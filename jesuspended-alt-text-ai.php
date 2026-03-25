@@ -3,18 +3,18 @@
  * Plugin Name: AI Alt Text Generator
  * Plugin URI:  https://github.com/aliameenco-creator/wordpress-pro-plugin
  * Description: Automatically generate alt text for images using Google's Gemini API with a single click. Supports custom niche/industry context for better SEO-optimized alt text.
- * Version:     1.1.0
+ * Version:     1.2.0
  * Author:      Ali Ameen
  * Author URI:  https://github.com/aliameenco-creator
  * License:     GPL-2.0+
- * Text Domain: ai-alt-text-generator
+ * Text Domain: jesuspended-alt-text-ai
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-define( 'AI_ALT_TEXT_VERSION', '1.1.0' );
+define( 'AI_ALT_TEXT_VERSION', '1.2.0' );
 define( 'AI_ALT_TEXT_FILE', __FILE__ );
 define( 'AI_ALT_TEXT_DIR', plugin_dir_path( __FILE__ ) );
 
@@ -54,16 +54,16 @@ class AI_Alt_Text_Generator {
      */
     public function add_settings_page() {
         add_options_page(
-            __( 'AI Alt Text Generator', 'ai-alt-text-generator' ),
-            __( 'AI Alt Text', 'ai-alt-text-generator' ),
+            __( 'AI Alt Text Generator', 'jesuspended-alt-text-ai' ),
+            __( 'AI Alt Text', 'jesuspended-alt-text-ai' ),
             'manage_options',
-            'ai-alt-text-generator',
+            'jesuspended-alt-text-ai',
             array( $this, 'render_settings_page' )
         );
 
         add_media_page(
-            __( 'Bulk Generate Alt Text', 'ai-alt-text-generator' ),
-            __( 'Bulk Alt Text AI', 'ai-alt-text-generator' ),
+            __( 'Bulk Generate Alt Text', 'jesuspended-alt-text-ai' ),
+            __( 'Bulk Alt Text AI', 'jesuspended-alt-text-ai' ),
             'upload_files',
             'ai-alt-text-bulk',
             array( $this, 'render_bulk_page' )
@@ -136,7 +136,7 @@ class AI_Alt_Text_Generator {
                 '<button type="button" class="button ai-generate-alt-btn" data-attachment-id="%d">%s</button>
                  <span class="ai-alt-spinner spinner" style="float:none;"></span>',
                 esc_attr( $post->ID ),
-                esc_html__( '🤖 Generate Alt Text with AI', 'ai-alt-text-generator' )
+                esc_html__( '🤖 Generate Alt Text with AI', 'jesuspended-alt-text-ai' )
             ),
         );
 
@@ -150,12 +150,12 @@ class AI_Alt_Text_Generator {
         check_ajax_referer( 'ai_alt_text_nonce', 'nonce' );
 
         if ( ! current_user_can( 'upload_files' ) ) {
-            wp_send_json_error( __( 'Permission denied.', 'ai-alt-text-generator' ) );
+            wp_send_json_error( __( 'Permission denied.', 'jesuspended-alt-text-ai' ) );
         }
 
         $attachment_id = isset( $_POST['attachment_id'] ) ? absint( $_POST['attachment_id'] ) : 0;
         if ( ! $attachment_id || ! wp_attachment_is_image( $attachment_id ) ) {
-            wp_send_json_error( __( 'Invalid image.', 'ai-alt-text-generator' ) );
+            wp_send_json_error( __( 'Invalid image.', 'jesuspended-alt-text-ai' ) );
         }
 
         $result = $this->generate_alt_text_for_image( $attachment_id );
@@ -177,12 +177,12 @@ class AI_Alt_Text_Generator {
         check_ajax_referer( 'ai_alt_text_nonce', 'nonce' );
 
         if ( ! current_user_can( 'upload_files' ) ) {
-            wp_send_json_error( __( 'Permission denied.', 'ai-alt-text-generator' ) );
+            wp_send_json_error( __( 'Permission denied.', 'jesuspended-alt-text-ai' ) );
         }
 
         $attachment_ids = isset( $_POST['attachment_ids'] ) ? array_map( 'absint', (array) $_POST['attachment_ids'] ) : array();
         if ( empty( $attachment_ids ) ) {
-            wp_send_json_error( __( 'No images selected.', 'ai-alt-text-generator' ) );
+            wp_send_json_error( __( 'No images selected.', 'jesuspended-alt-text-ai' ) );
         }
 
         $results = array();
@@ -244,17 +244,17 @@ class AI_Alt_Text_Generator {
     private function generate_alt_text_for_image( $attachment_id ) {
         $api_key = get_option( $this->option_api_key );
         if ( empty( $api_key ) ) {
-            return new WP_Error( 'no_api_key', __( 'Gemini API key is not configured. Go to Settings → AI Alt Text to add it.', 'ai-alt-text-generator' ) );
+            return new WP_Error( 'no_api_key', __( 'Gemini API key is not configured. Go to Settings → AI Alt Text to add it.', 'jesuspended-alt-text-ai' ) );
         }
 
         $image_path = get_attached_file( $attachment_id );
         if ( ! $image_path || ! file_exists( $image_path ) ) {
-            return new WP_Error( 'no_file', __( 'Image file not found.', 'ai-alt-text-generator' ) );
+            return new WP_Error( 'no_file', __( 'Image file not found.', 'jesuspended-alt-text-ai' ) );
         }
 
         $image_data = file_get_contents( $image_path );
         if ( ! $image_data ) {
-            return new WP_Error( 'read_error', __( 'Could not read image file.', 'ai-alt-text-generator' ) );
+            return new WP_Error( 'read_error', __( 'Could not read image file.', 'jesuspended-alt-text-ai' ) );
         }
 
         $mime_type = mime_content_type( $image_path );
@@ -294,7 +294,7 @@ class AI_Alt_Text_Generator {
         $data   = json_decode( wp_remote_retrieve_body( $response ), true );
 
         if ( $status !== 200 ) {
-            $error_msg = isset( $data['error']['message'] ) ? $data['error']['message'] : __( 'Gemini API error.', 'ai-alt-text-generator' );
+            $error_msg = isset( $data['error']['message'] ) ? $data['error']['message'] : __( 'Gemini API error.', 'jesuspended-alt-text-ai' );
             return new WP_Error( 'api_error', $error_msg );
         }
 
@@ -304,7 +304,7 @@ class AI_Alt_Text_Generator {
         }
 
         if ( empty( $alt_text ) ) {
-            return new WP_Error( 'empty_response', __( 'Gemini returned an empty response.', 'ai-alt-text-generator' ) );
+            return new WP_Error( 'empty_response', __( 'Gemini returned an empty response.', 'jesuspended-alt-text-ai' ) );
         }
 
         update_post_meta( $attachment_id, '_wp_attachment_image_alt', $alt_text );
@@ -322,66 +322,66 @@ class AI_Alt_Text_Generator {
         $tone          = get_option( $this->option_tone, 'professional' );
         ?>
         <div class="wrap">
-            <h1><?php esc_html_e( 'AI Alt Text Generator — Settings', 'ai-alt-text-generator' ); ?></h1>
+            <h1><?php esc_html_e( 'AI Alt Text Generator — Settings', 'jesuspended-alt-text-ai' ); ?></h1>
             <form method="post" action="options.php">
                 <?php settings_fields( 'ai_alt_text_settings' ); ?>
 
                 <!-- API Key Section -->
-                <h2><?php esc_html_e( 'API Configuration', 'ai-alt-text-generator' ); ?></h2>
+                <h2><?php esc_html_e( 'API Configuration', 'jesuspended-alt-text-ai' ); ?></h2>
                 <table class="form-table">
                     <tr>
                         <th scope="row">
-                            <label for="ai_alt_text_api_key"><?php esc_html_e( 'Google Gemini API Key', 'ai-alt-text-generator' ); ?></label>
+                            <label for="ai_alt_text_api_key"><?php esc_html_e( 'Google Gemini API Key', 'jesuspended-alt-text-ai' ); ?></label>
                         </th>
                         <td>
                             <input type="password" id="ai_alt_text_api_key" name="<?php echo esc_attr( $this->option_api_key ); ?>"
                                    value="<?php echo esc_attr( get_option( $this->option_api_key ) ); ?>"
                                    class="regular-text" autocomplete="off" />
                             <p class="description">
-                                <?php esc_html_e( 'Get your free API key from Google AI Studio (aistudio.google.com).', 'ai-alt-text-generator' ); ?>
+                                <?php esc_html_e( 'Get your free API key from Google AI Studio (aistudio.google.com).', 'jesuspended-alt-text-ai' ); ?>
                             </p>
                         </td>
                     </tr>
                 </table>
 
                 <!-- Niche & Context Section -->
-                <h2><?php esc_html_e( 'Website Niche & Context', 'ai-alt-text-generator' ); ?></h2>
+                <h2><?php esc_html_e( 'Website Niche & Context', 'jesuspended-alt-text-ai' ); ?></h2>
                 <p class="description" style="margin-bottom: 15px;">
-                    <?php esc_html_e( 'Tell the AI about your website so it generates more relevant, SEO-optimized alt text with industry-specific keywords.', 'ai-alt-text-generator' ); ?>
+                    <?php esc_html_e( 'Tell the AI about your website so it generates more relevant, SEO-optimized alt text with industry-specific keywords.', 'jesuspended-alt-text-ai' ); ?>
                 </p>
                 <table class="form-table">
                     <tr>
                         <th scope="row">
-                            <label for="ai_alt_text_niche"><?php esc_html_e( 'Website Niche / Industry', 'ai-alt-text-generator' ); ?></label>
+                            <label for="ai_alt_text_niche"><?php esc_html_e( 'Website Niche / Industry', 'jesuspended-alt-text-ai' ); ?></label>
                         </th>
                         <td>
                             <input type="text" id="ai_alt_text_niche" name="<?php echo esc_attr( $this->option_niche ); ?>"
                                    value="<?php echo esc_attr( $niche ); ?>"
                                    class="regular-text"
-                                   placeholder="<?php esc_attr_e( 'e.g., Furniture, Real Estate, Food & Recipe, Fashion, Technology...', 'ai-alt-text-generator' ); ?>" />
+                                   placeholder="<?php esc_attr_e( 'e.g., Furniture, Real Estate, Food & Recipe, Fashion, Technology...', 'jesuspended-alt-text-ai' ); ?>" />
                             <p class="description">
-                                <?php esc_html_e( 'Enter your website\'s niche or industry. The AI will use relevant keywords and terminology from this field.', 'ai-alt-text-generator' ); ?>
+                                <?php esc_html_e( 'Enter your website\'s niche or industry. The AI will use relevant keywords and terminology from this field.', 'jesuspended-alt-text-ai' ); ?>
                             </p>
                         </td>
                     </tr>
                     <tr>
                         <th scope="row">
-                            <label for="ai_alt_text_tone"><?php esc_html_e( 'Writing Tone', 'ai-alt-text-generator' ); ?></label>
+                            <label for="ai_alt_text_tone"><?php esc_html_e( 'Writing Tone', 'jesuspended-alt-text-ai' ); ?></label>
                         </th>
                         <td>
                             <select id="ai_alt_text_tone" name="<?php echo esc_attr( $this->option_tone ); ?>">
-                                <option value="professional" <?php selected( $tone, 'professional' ); ?>><?php esc_html_e( 'Professional', 'ai-alt-text-generator' ); ?></option>
-                                <option value="casual" <?php selected( $tone, 'casual' ); ?>><?php esc_html_e( 'Casual', 'ai-alt-text-generator' ); ?></option>
-                                <option value="descriptive" <?php selected( $tone, 'descriptive' ); ?>><?php esc_html_e( 'Descriptive', 'ai-alt-text-generator' ); ?></option>
-                                <option value="technical" <?php selected( $tone, 'technical' ); ?>><?php esc_html_e( 'Technical', 'ai-alt-text-generator' ); ?></option>
-                                <option value="friendly" <?php selected( $tone, 'friendly' ); ?>><?php esc_html_e( 'Friendly', 'ai-alt-text-generator' ); ?></option>
-                                <option value="luxurious" <?php selected( $tone, 'luxurious' ); ?>><?php esc_html_e( 'Luxurious / Premium', 'ai-alt-text-generator' ); ?></option>
+                                <option value="professional" <?php selected( $tone, 'professional' ); ?>><?php esc_html_e( 'Professional', 'jesuspended-alt-text-ai' ); ?></option>
+                                <option value="casual" <?php selected( $tone, 'casual' ); ?>><?php esc_html_e( 'Casual', 'jesuspended-alt-text-ai' ); ?></option>
+                                <option value="descriptive" <?php selected( $tone, 'descriptive' ); ?>><?php esc_html_e( 'Descriptive', 'jesuspended-alt-text-ai' ); ?></option>
+                                <option value="technical" <?php selected( $tone, 'technical' ); ?>><?php esc_html_e( 'Technical', 'jesuspended-alt-text-ai' ); ?></option>
+                                <option value="friendly" <?php selected( $tone, 'friendly' ); ?>><?php esc_html_e( 'Friendly', 'jesuspended-alt-text-ai' ); ?></option>
+                                <option value="luxurious" <?php selected( $tone, 'luxurious' ); ?>><?php esc_html_e( 'Luxurious / Premium', 'jesuspended-alt-text-ai' ); ?></option>
                             </select>
                         </td>
                     </tr>
                     <tr>
                         <th scope="row">
-                            <label for="ai_alt_text_language"><?php esc_html_e( 'Alt Text Language', 'ai-alt-text-generator' ); ?></label>
+                            <label for="ai_alt_text_language"><?php esc_html_e( 'Alt Text Language', 'jesuspended-alt-text-ai' ); ?></label>
                         </th>
                         <td>
                             <input type="text" id="ai_alt_text_language" name="<?php echo esc_attr( $this->option_language ); ?>"
@@ -389,33 +389,33 @@ class AI_Alt_Text_Generator {
                                    class="regular-text"
                                    placeholder="English" />
                             <p class="description">
-                                <?php esc_html_e( 'Language for the generated alt text. Default: English.', 'ai-alt-text-generator' ); ?>
+                                <?php esc_html_e( 'Language for the generated alt text. Default: English.', 'jesuspended-alt-text-ai' ); ?>
                             </p>
                         </td>
                     </tr>
                     <tr>
                         <th scope="row">
-                            <label for="ai_alt_text_custom_prompt"><?php esc_html_e( 'Custom Instructions', 'ai-alt-text-generator' ); ?></label>
+                            <label for="ai_alt_text_custom_prompt"><?php esc_html_e( 'Custom Instructions', 'jesuspended-alt-text-ai' ); ?></label>
                         </th>
                         <td>
                             <textarea id="ai_alt_text_custom_prompt" name="<?php echo esc_attr( $this->option_custom_prompt ); ?>"
                                       rows="5" class="large-text"
-                                      placeholder="<?php esc_attr_e( 'e.g., Always include the brand name "MyBrand" when the logo is visible. Focus on materials and craftsmanship for product images. Keep alt text under 125 characters.', 'ai-alt-text-generator' ); ?>"><?php echo esc_textarea( $custom_prompt ); ?></textarea>
+                                      placeholder="<?php esc_attr_e( 'e.g., Always include the brand name "MyBrand" when the logo is visible. Focus on materials and craftsmanship for product images. Keep alt text under 125 characters.', 'jesuspended-alt-text-ai' ); ?>"><?php echo esc_textarea( $custom_prompt ); ?></textarea>
                             <p class="description">
-                                <?php esc_html_e( 'Add any custom instructions for the AI. This is your personal system prompt — you can tell it exactly how you want your alt text written.', 'ai-alt-text-generator' ); ?>
+                                <?php esc_html_e( 'Add any custom instructions for the AI. This is your personal system prompt — you can tell it exactly how you want your alt text written.', 'jesuspended-alt-text-ai' ); ?>
                             </p>
                         </td>
                     </tr>
                 </table>
 
                 <!-- Prompt Preview -->
-                <h2><?php esc_html_e( 'Prompt Preview', 'ai-alt-text-generator' ); ?></h2>
+                <h2><?php esc_html_e( 'Prompt Preview', 'jesuspended-alt-text-ai' ); ?></h2>
                 <div style="background:#f0f0f1; border:1px solid #c3c4c7; border-radius:4px; padding:12px 16px; max-width:700px;">
                     <code style="white-space:pre-wrap; word-break:break-word; font-size:12px;">
                         <?php echo esc_html( $this->build_prompt() ); ?>
                     </code>
                 </div>
-                <p class="description"><?php esc_html_e( 'This is the prompt that will be sent to Gemini along with each image. Save settings to update.', 'ai-alt-text-generator' ); ?></p>
+                <p class="description"><?php esc_html_e( 'This is the prompt that will be sent to Gemini along with each image. Save settings to update.', 'jesuspended-alt-text-ai' ); ?></p>
 
                 <?php submit_button(); ?>
             </form>
@@ -437,12 +437,12 @@ class AI_Alt_Text_Generator {
         ) );
         ?>
         <div class="wrap">
-            <h1><?php esc_html_e( 'Bulk Generate Alt Text with AI', 'ai-alt-text-generator' ); ?></h1>
-            <p><?php esc_html_e( 'Select images below and click "Generate Alt Text" to automatically create alt text using Gemini AI.', 'ai-alt-text-generator' ); ?></p>
+            <h1><?php esc_html_e( 'Bulk Generate Alt Text with AI', 'jesuspended-alt-text-ai' ); ?></h1>
+            <p><?php esc_html_e( 'Select images below and click "Generate Alt Text" to automatically create alt text using Gemini AI.', 'jesuspended-alt-text-ai' ); ?></p>
 
             <?php if ( empty( get_option( $this->option_api_key ) ) ) : ?>
                 <div class="notice notice-error">
-                    <p><?php esc_html_e( 'Please configure your Gemini API key in Settings → AI Alt Text first.', 'ai-alt-text-generator' ); ?></p>
+                    <p><?php esc_html_e( 'Please configure your Gemini API key in Settings → AI Alt Text first.', 'jesuspended-alt-text-ai' ); ?></p>
                 </div>
             <?php endif; ?>
 
@@ -450,7 +450,7 @@ class AI_Alt_Text_Generator {
             $niche = get_option( $this->option_niche, '' );
             if ( ! empty( $niche ) ) : ?>
                 <div class="notice notice-info" style="display:inline-block;">
-                    <p><?php printf( esc_html__( 'Active niche: %s', 'ai-alt-text-generator' ), '<strong>' . esc_html( $niche ) . '</strong>' ); ?></p>
+                    <p><?php printf( esc_html__( 'Active niche: %s', 'jesuspended-alt-text-ai' ), '<strong>' . esc_html( $niche ) . '</strong>' ); ?></p>
                 </div>
             <?php endif; ?>
 
@@ -458,16 +458,16 @@ class AI_Alt_Text_Generator {
                 <div class="ai-bulk-controls" style="margin: 15px 0;">
                     <label>
                         <input type="checkbox" id="ai-select-all" />
-                        <?php esc_html_e( 'Select All', 'ai-alt-text-generator' ); ?>
+                        <?php esc_html_e( 'Select All', 'jesuspended-alt-text-ai' ); ?>
                     </label>
                     &nbsp;&nbsp;
                     <label>
                         <input type="checkbox" id="ai-select-missing" />
-                        <?php esc_html_e( 'Select Only Missing Alt Text', 'ai-alt-text-generator' ); ?>
+                        <?php esc_html_e( 'Select Only Missing Alt Text', 'jesuspended-alt-text-ai' ); ?>
                     </label>
                     &nbsp;&nbsp;
                     <button type="button" class="button button-primary" id="ai-bulk-generate-btn">
-                        <?php esc_html_e( '🤖 Generate Alt Text for Selected', 'ai-alt-text-generator' ); ?>
+                        <?php esc_html_e( '🤖 Generate Alt Text for Selected', 'jesuspended-alt-text-ai' ); ?>
                     </button>
                     <span class="spinner" id="ai-bulk-spinner" style="float:none;"></span>
                 </div>
@@ -483,11 +483,11 @@ class AI_Alt_Text_Generator {
                     <thead>
                         <tr>
                             <th style="width:40px;"><input type="checkbox" id="ai-header-check" /></th>
-                            <th style="width:80px;"><?php esc_html_e( 'Image', 'ai-alt-text-generator' ); ?></th>
-                            <th><?php esc_html_e( 'Title', 'ai-alt-text-generator' ); ?></th>
-                            <th><?php esc_html_e( 'Current Alt Text', 'ai-alt-text-generator' ); ?></th>
-                            <th style="width:100px;"><?php esc_html_e( 'Action', 'ai-alt-text-generator' ); ?></th>
-                            <th><?php esc_html_e( 'Status', 'ai-alt-text-generator' ); ?></th>
+                            <th style="width:80px;"><?php esc_html_e( 'Image', 'jesuspended-alt-text-ai' ); ?></th>
+                            <th><?php esc_html_e( 'Title', 'jesuspended-alt-text-ai' ); ?></th>
+                            <th><?php esc_html_e( 'Current Alt Text', 'jesuspended-alt-text-ai' ); ?></th>
+                            <th style="width:100px;"><?php esc_html_e( 'Action', 'jesuspended-alt-text-ai' ); ?></th>
+                            <th><?php esc_html_e( 'Status', 'jesuspended-alt-text-ai' ); ?></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -500,10 +500,10 @@ class AI_Alt_Text_Generator {
                             <td><input type="checkbox" class="ai-image-check" value="<?php echo esc_attr( $image->ID ); ?>" /></td>
                             <td><?php echo $thumb; ?></td>
                             <td><?php echo esc_html( $image->post_title ); ?></td>
-                            <td class="ai-current-alt"><?php echo $has_alt ? esc_html( $alt ) : '<em>' . esc_html__( '(none)', 'ai-alt-text-generator' ) . '</em>'; ?></td>
+                            <td class="ai-current-alt"><?php echo $has_alt ? esc_html( $alt ) : '<em>' . esc_html__( '(none)', 'jesuspended-alt-text-ai' ) . '</em>'; ?></td>
                             <td>
                                 <button type="button" class="button button-small ai-single-generate-btn" data-id="<?php echo esc_attr( $image->ID ); ?>">
-                                    <?php esc_html_e( 'Generate', 'ai-alt-text-generator' ); ?>
+                                    <?php esc_html_e( 'Generate', 'jesuspended-alt-text-ai' ); ?>
                                 </button>
                             </td>
                             <td class="ai-status"></td>
@@ -512,7 +512,7 @@ class AI_Alt_Text_Generator {
                     </tbody>
                 </table>
             <?php else : ?>
-                <p><?php esc_html_e( 'No images found in your media library.', 'ai-alt-text-generator' ); ?></p>
+                <p><?php esc_html_e( 'No images found in your media library.', 'jesuspended-alt-text-ai' ); ?></p>
             <?php endif; ?>
         </div>
         <?php

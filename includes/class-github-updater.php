@@ -29,6 +29,38 @@ class AI_Alt_Text_GitHub_Updater {
         add_filter( 'pre_set_site_transient_update_plugins', array( $this, 'check_for_update' ) );
         add_filter( 'plugins_api', array( $this, 'plugin_info' ), 20, 3 );
         add_filter( 'upgrader_post_install', array( $this, 'after_install' ), 10, 3 );
+
+        // Block WordPress.org from overriding our updates
+        add_filter( 'http_request_args', array( $this, 'exclude_from_wporg' ), 5, 2 );
+    }
+
+    /**
+     * Exclude this plugin from WordPress.org update checks.
+     * Prevents slug collisions with plugins hosted on .org.
+     */
+    public function exclude_from_wporg( $args, $url ) {
+        if ( strpos( $url, 'api.wordpress.org/plugins/update-check' ) === false ) {
+            return $args;
+        }
+
+        if ( ! isset( $args['body']['plugins'] ) ) {
+            return $args;
+        }
+
+        $plugins = json_decode( $args['body']['plugins'], true );
+        $basename = plugin_basename( $this->file );
+
+        if ( isset( $plugins['plugins'][ $basename ] ) ) {
+            unset( $plugins['plugins'][ $basename ] );
+        }
+
+        if ( isset( $plugins['active'] ) && is_array( $plugins['active'] ) ) {
+            $plugins['active'] = array_values( array_diff( $plugins['active'], array( $basename ) ) );
+        }
+
+        $args['body']['plugins'] = wp_json_encode( $plugins );
+
+        return $args;
     }
 
     /**
