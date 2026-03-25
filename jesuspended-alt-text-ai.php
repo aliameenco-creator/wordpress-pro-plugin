@@ -3,7 +3,7 @@
  * Plugin Name: Jesuspended AI Alt Text
  * Plugin URI:  https://github.com/aliameenco-creator/wordpress-pro-plugin
  * Description: Automatically generate alt text for images using Google's Gemini API with a single click. Supports custom niche/industry context for better SEO-optimized alt text.
- * Version:     1.5.0
+ * Version:     1.6.0
  * Author:      Ali Ameen
  * Author URI:  https://github.com/aliameenco-creator
  * License:     GPL-2.0+
@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-define( 'AI_ALT_TEXT_VERSION', '1.5.0' );
+define( 'AI_ALT_TEXT_VERSION', '1.6.0' );
 define( 'AI_ALT_TEXT_FILE', __FILE__ );
 define( 'AI_ALT_TEXT_DIR', plugin_dir_path( __FILE__ ) );
 
@@ -41,6 +41,9 @@ class AI_Alt_Text_Generator {
         add_action( 'wp_ajax_ai_generate_alt_text', array( $this, 'ajax_generate_alt_text' ) );
         add_action( 'wp_ajax_ai_generate_alt_text_bulk', array( $this, 'ajax_generate_alt_text_bulk' ) );
         add_action( 'wp_ajax_ai_alt_text_check_update', array( $this, 'ajax_check_update' ) );
+
+        // Add action links on Plugins page
+        add_filter( 'plugin_action_links_' . plugin_basename( AI_ALT_TEXT_FILE ), array( $this, 'add_plugin_action_links' ) );
 
         // Initialize GitHub updater
         new AI_Alt_Text_GitHub_Updater(
@@ -72,6 +75,24 @@ class AI_Alt_Text_Generator {
     }
 
     /**
+     * Add Settings and Check for Updates links on the Plugins page.
+     */
+    public function add_plugin_action_links( $links ) {
+        $settings_link = sprintf(
+            '<a href="%s">%s</a>',
+            admin_url( 'options-general.php?page=jesuspended-alt-text-ai' ),
+            __( 'Settings', 'jesuspended-alt-text-ai' )
+        );
+        $update_link = sprintf(
+            '<a href="%s" style="color:#2271b1; font-weight:500;">%s</a>',
+            admin_url( 'options-general.php?page=jesuspended-alt-text-ai#ai-update-section' ),
+            __( 'Check for Updates', 'jesuspended-alt-text-ai' )
+        );
+        array_unshift( $links, $settings_link, $update_link );
+        return $links;
+    }
+
+    /**
      * Register plugin settings.
      */
     public function register_settings() {
@@ -96,8 +117,8 @@ class AI_Alt_Text_Generator {
      * Enqueue admin scripts and styles.
      */
     public function enqueue_admin_assets( $hook ) {
-        $allowed = array( 'post.php', 'post-new.php', 'upload.php', 'media_page_ai-alt-text-bulk', 'settings_page_ai-alt-text-generator' );
-        if ( ! in_array( $hook, $allowed, true ) && strpos( $hook, 'ai-alt-text' ) === false ) {
+        $allowed = array( 'post.php', 'post-new.php', 'upload.php', 'media_page_ai-alt-text-bulk', 'settings_page_jesuspended-alt-text-ai' );
+        if ( ! in_array( $hook, $allowed, true ) && strpos( $hook, 'jesuspended' ) === false && strpos( $hook, 'ai-alt-text' ) === false ) {
             return;
         }
 
